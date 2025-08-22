@@ -1,2 +1,2 @@
-pub mod textbox;
-pub mod chat_mode;
+pub mod chat_history;
+pub mod message;
