@@ -27,7 +27,6 @@ fn main() -> io::Result<()> {
 #[derive(Default, Debug)]
 struct App {
     pub exit: bool,
-    pub list_state: ListState,
     pub msg: Message
 }
 
@@ -53,6 +52,8 @@ impl App {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 match key_event.code {
                     KeyCode::Char('q') => self.exit(),
+                    KeyCode::Char('l') => self.msg.increase_scrollbar_state(),
+                    KeyCode::Char('h') => self.msg.decrease_scrollbar_state(),
                     _ => {}
                 }
             }

@@ -1,23 +1,15 @@
-use ratatui::layout::{Constraint, Flex, Layout, Rect};
-
-pub fn center_horizontal(area: Rect, width: u16) -> Rect {
-    let [area] = Layout::horizontal([Constraint::Length(width)])
-        .flex(Flex::Center)
-        .areas(area);
-    area
+pub fn get_height(text: &String) -> u16 {
+    return (text.split('\n').count() + 2) as u16;
 }
 
-pub fn center(area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
-    let [area] = Layout::horizontal([horizontal])
-        .flex(Flex::Center)
-        .areas(area);
-    let [area] = Layout::vertical([vertical]).flex(Flex::Center).areas(area);
-    area
-}
+pub fn get_longest_string(text: &String) -> usize {
+    let mut longest: usize = 0;
 
-pub fn center_vertical(area: Rect, height: u16) -> Rect {
-    let [area] = Layout::vertical([Constraint::Length(height)])
-        .flex(Flex::Center)
-        .areas(area);
-    area
+    text.clone().split('\n').into_iter().for_each(|item| {
+        if item.len() > longest as usize {
+            longest = item.len() as usize;
+        }
+    });
+
+    return longest;
 }
