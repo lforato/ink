@@ -1,3 +1,4 @@
+use log::info;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -8,10 +9,15 @@ use ratatui::{
 
 use crate::utils::{get_height, get_longest_string};
 
+pub const OFFSET: usize = 2;
+
 #[derive(Debug)]
 pub struct Message {
     pub text: String,
-    pub scrollbar_state: usize,
+    pub h_scroll_state: usize,
+    pub h_scroll_width: Option<usize>,
+    pub v_scroll_state: usize,
+    pub v_scroll_width: Option<usize>,
 }
 
 impl Default for Message {
@@ -19,89 +25,180 @@ impl Default for Message {
         Self {
             text: String::from("
 0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
 "),
-            scrollbar_state: 0,
+            h_scroll_state: 0,
+            h_scroll_width: None,
+            v_scroll_state: 0,
+            v_scroll_width: None,
         }
     }
 }
 
 impl Message {
-    pub fn increase_scrollbar_state(&mut self) {
-        self.scrollbar_state += 1;
+    pub fn increase_h_scroll_state(&mut self) {
+        match self.h_scroll_width {
+            Some(val) => {
+                self.h_scroll_state += if self.h_scroll_state >= val + OFFSET {
+                    0
+                } else {
+                    1
+                }
+            }
+            None => self.h_scroll_state += 1,
+        }
     }
 
-    pub fn decrease_scrollbar_state(&mut self) {
-        self.scrollbar_state -= 1;
+    pub fn decrease_h_scroll_state(&mut self) {
+        if self.h_scroll_state == 0 {
+            return;
+        }
+        self.h_scroll_state -= 1
+    }
+
+    pub fn increase_v_scroll_state(&mut self) {
+        match self.v_scroll_width {
+            Some(val) => self.v_scroll_state += if self.v_scroll_state >= val { 0 } else { 1 },
+            None => self.v_scroll_state += 1,
+        }
+    }
+
+    pub fn decrease_v_scroll_state(&mut self) {
+        if self.v_scroll_state == 0 {
+            return;
+        }
+        self.v_scroll_state -= 1
+    }
+
+    pub fn set_scrollable_width(&mut self, value: usize) {
+        self.h_scroll_width = Some(value);
+    }
+
+    pub fn set_scrollable_height(&mut self, value: usize) {
+        self.v_scroll_width = Some(value);
     }
 }
 
-impl Widget for &Message {
+impl Widget for &mut Message {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let txt = self.text.clone();
 
-        let width = get_longest_string(&txt);
-        let layout = Layout::horizontal([Constraint::Percentage(80)]).split(area)[0];
-
-        let scrollbar = Scrollbar::new(ScrollbarOrientation::HorizontalTop)
-            .end_symbol(Some("]"))
-            .thumb_symbol("■")
-            .begin_symbol(Some("["))
-            .track_symbol(Some("─"));
-        let mut scrollbar_state = ScrollbarState::new(width).position(self.scrollbar_state);
+        let layout =
+            Layout::horizontal([Constraint::Length(1), Constraint::Percentage(80)]).split(area);
 
         let height = get_height(&txt);
-        let layout =
-            Layout::vertical([Constraint::Length(2), Constraint::Length(height)]).split(layout);
+        let layout1 =
+            Layout::vertical([Constraint::Length(1), Constraint::Length(height)]).split(layout[0]);
+        let layout2 =
+            Layout::vertical([Constraint::Length(1), Constraint::Length(height)]).split(layout[1]);
 
-        StatefulWidget::render(scrollbar, layout[0], buf, &mut scrollbar_state);
+        Block::bordered().title("scr1").render(layout2[0], buf);
+        Block::bordered().title("scr2").render(layout1[1], buf);
+        Block::bordered().title("msg").render(layout2[1], buf);
+
+        self.render_horizontal_scrollbar(layout2[0], buf);
+        self.render_vertical_scrollbar(layout1[1], buf);
 
         let block = Block::bordered().title("System");
-
         Paragraph::new(txt)
-            .scroll((0, self.scrollbar_state as u16))
+            .scroll((self.v_scroll_state as u16, self.h_scroll_state as u16))
             .block(block)
-            .render(layout[1], buf);
+            .render(layout2[1], buf);
+    }
+}
+
+impl Message {
+    pub fn render_horizontal_scrollbar(&mut self, area: Rect, buf: &mut Buffer) {
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::HorizontalTop)
+            .end_symbol(Some("▶"))
+            .thumb_symbol("■")
+            .begin_symbol(Some("◀"))
+            .track_symbol(Some("─"));
+
+        let content_width = get_longest_string(&self.text);
+        let viewport_width = area.width as usize;
+        let scrollable_width = content_width.saturating_sub(viewport_width);
+        self.set_scrollable_width(scrollable_width);
+
+        let mut scrollbar_state =
+            ScrollbarState::new(scrollable_width).position(self.h_scroll_state);
+
+        StatefulWidget::render(scrollbar, area, buf, &mut scrollbar_state);
+    }
+
+    pub fn render_vertical_scrollbar(&mut self, area: Rect, buf: &mut Buffer) {
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .begin_symbol(Some("▲"))
+            .end_symbol(Some("▼"))
+            .track_symbol(Some("│"));
+
+        let content_height = get_height(&self.text) as usize;
+        let viewport_height = area.height as usize;
+        let scrollable_height = content_height.saturating_sub(viewport_height);
+        self.set_scrollable_height(scrollable_height);
+
+        let mut scrollbar_state =
+            ScrollbarState::new(scrollable_height).position(self.v_scroll_state);
+
+        StatefulWidget::render(scrollbar, area, buf, &mut scrollbar_state);
     }
 }

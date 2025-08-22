@@ -1,22 +1,24 @@
-use std::io::{self, Result};
-
 use flexi_logger::{FileSpec, Logger, detailed_format};
 use ink::widgets::message::Message;
+use log::info;
 use ratatui::{
     DefaultTerminal, Frame,
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::Rect,
-    widgets::{ListState, Widget},
+    widgets::Widget,
 };
+use std::io::{self, Result};
 
 fn main() -> io::Result<()> {
     Logger::try_with_str("info")
         .unwrap()
-        .log_to_file(FileSpec::default().directory("logs").suppress_timestamp())
+        .log_to_file(FileSpec::default().directory("logs"))
         .format(detailed_format)
         .start()
-        .unwrap();
+        .unwrap_or_else(|e| panic!("Logger initialization failed: {}", e));
+
+    info!("Started logger");
 
     let mut term = ratatui::init();
     let app_result = App::default().run(&mut term);
@@ -27,7 +29,7 @@ fn main() -> io::Result<()> {
 #[derive(Default, Debug)]
 struct App {
     pub exit: bool,
-    pub msg: Message
+    pub msg: Message,
 }
 
 impl App {
@@ -52,8 +54,10 @@ impl App {
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 match key_event.code {
                     KeyCode::Char('q') => self.exit(),
-                    KeyCode::Char('l') => self.msg.increase_scrollbar_state(),
-                    KeyCode::Char('h') => self.msg.decrease_scrollbar_state(),
+                    KeyCode::Char('l') => self.msg.increase_h_scroll_state(),
+                    KeyCode::Char('h') => self.msg.decrease_h_scroll_state(),
+                    KeyCode::Char('j') => self.msg.increase_v_scroll_state(),
+                    KeyCode::Char('k') => self.msg.decrease_v_scroll_state(),
                     _ => {}
                 }
             }
