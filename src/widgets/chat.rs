@@ -92,11 +92,9 @@ impl Widget for &mut Chat {
         for item in self.messages.iter_mut() {
             let h = item.height as i32;
 
-            // Where this message starts in the full "virtual chat"
             let msg_top = y - chat_inner.y as i32;
             let msg_bottom = msg_top + h;
 
-            // Compute what part of this message is actually visible
             let visible_top = scroll_top.max(msg_top);
             let visible_bottom = (scroll_top + visible_height) as i32;
             let clip_start = (visible_top - msg_top).max(0);
