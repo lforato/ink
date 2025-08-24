@@ -1,12 +1,12 @@
-use flexi_logger::{detailed_format, FileSpec, Logger};
-use ink::widgets::{chat::Chat, message::Message};
+use flexi_logger::{FileSpec, Logger, detailed_format};
+use ink::widgets::chat::Chat;
 use log::info;
 use ratatui::{
+    DefaultTerminal, Frame,
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::Rect,
     widgets::Widget,
-    DefaultTerminal, Frame,
 };
 use std::io::{self, Result};
 
@@ -35,10 +35,8 @@ struct App {
 impl App {
     fn new() -> Self {
         let mut messages = Vec::new();
-        let message = String::from("Hello world");
-        let message2 = String::from("Hello world");
-        messages.push(message);
-        messages.push(message2);
+        let msg = String::from("hello world");
+        messages.push(msg);
 
         let chat = Chat::new(messages);
 
