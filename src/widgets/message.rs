@@ -1,4 +1,3 @@
-use log::info;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -14,132 +13,72 @@ pub const OFFSET: usize = 2;
 #[derive(Debug)]
 pub struct Message {
     pub text: String,
-    pub h_scroll_state: usize,
-    pub h_scroll_width: Option<usize>,
-    pub v_scroll_state: usize,
-    pub v_scroll_width: Option<usize>,
-}
-
-impl Default for Message {
-    fn default() -> Self {
-        Self {
-            text: String::from("
-0-abcdefghijklmnopqrstuvwxyz 1-abcdefghijklmnopqrstuvwxyz 2-abcdefghijklmnopqrstuvwxyz 3-abcdefghijklmnopqrstuvwxyz 4-abcdefghijklmnopqrstuvwxyz 5-abcdefghijklmnopqrstuvwxyz 6-abcdefghijklmnopqrstuvwxyz 7-abcdefghijklmnopqrstuvwxyz 8-abcdefghijklmnopqrstuvwxyz
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-"),
-            h_scroll_state: 0,
-            h_scroll_width: None,
-            v_scroll_state: 0,
-            v_scroll_width: None,
-        }
-    }
+    pub height: u16,
+    /// horizontal scroll position
+    pub scroll_state: usize,
+    /// horizontal scroll area
+    pub scroll_area: usize,
 }
 
 impl Message {
-    pub fn increase_h_scroll_state(&mut self) {
-        match self.h_scroll_width {
-            Some(val) => {
-                self.h_scroll_state += if self.h_scroll_state >= val + OFFSET {
-                    0
-                } else {
-                    1
-                }
-            }
-            None => self.h_scroll_state += 1,
+    pub fn new(text: String) -> Self {
+        let height = get_height(&text) as usize;
+        Message {
+            text,
+            height: height as u16,
+            scroll_state: 0,
+            scroll_area: 0,
         }
     }
 
-    pub fn decrease_h_scroll_state(&mut self) {
-        if self.h_scroll_state == 0 {
+    pub fn prepare(&mut self, area: Rect) {
+        let width = get_longest_string(&self.text);
+        let viewport_width = area.width as usize;
+        let scroll_area = width.saturating_sub(viewport_width);
+
+        self.scroll_area = scroll_area;
+    }
+
+    pub fn scroll_right(&mut self) -> () {
+        if self.scroll_area > self.scroll_state {
             return;
         }
-        self.h_scroll_state -= 1
+        self.scroll_state += 1;
     }
 
-    pub fn increase_v_scroll_state(&mut self) {
-        match self.v_scroll_width {
-            Some(val) => self.v_scroll_state += if self.v_scroll_state >= val { 0 } else { 1 },
-            None => self.v_scroll_state += 1,
-        }
-    }
-
-    pub fn decrease_v_scroll_state(&mut self) {
-        if self.v_scroll_state == 0 {
+    pub fn scroll_left(&mut self) {
+        if self.scroll_state == 0 {
             return;
         }
-        self.v_scroll_state -= 1
+        self.scroll_state -= 1
     }
 
-    pub fn set_scrollable_width(&mut self, value: usize) {
-        self.h_scroll_width = Some(value);
-    }
+    // pub fn increase_v_scroll_state(&mut self) {
+    //     match self.v_scroll_width {
+    //         Some(val) => self.v_scroll_state += if self.v_scroll_state >= val { 0 } else { 1 },
+    //         None => self.v_scroll_state += 1,
+    //     }
+    // }
+    //
+    // pub fn decrease_v_scroll_state(&mut self) {
+    //     if self.v_scroll_state == 0 {
+    //         return;
+    //     }
+    //     self.v_scroll_state -= 1
+    // }
 
-    pub fn set_scrollable_height(&mut self, value: usize) {
-        self.v_scroll_width = Some(value);
-    }
+    // pub fn set_scrollable_width(&mut self, value: usize) {
+    //     self.h_scroll_width = Some(value);
+    // }
+    //
+    // pub fn set_scrollable_height(&mut self, value: usize) {
+    //     self.v_scroll_width = Some(value);
+    // }
 }
 
 impl Widget for &mut Message {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        self.prepare(area);
         let txt = self.text.clone();
 
         let layout =
@@ -156,11 +95,11 @@ impl Widget for &mut Message {
         Block::bordered().title("msg").render(layout2[1], buf);
 
         self.render_horizontal_scrollbar(layout2[0], buf);
-        self.render_vertical_scrollbar(layout1[1], buf);
+        // self.render_vertical_scrollbar(layout1[1], buf);
 
         let block = Block::bordered().title("System");
         Paragraph::new(txt)
-            .scroll((self.v_scroll_state as u16, self.h_scroll_state as u16))
+            .scroll((0, self.scroll_state as u16))
             .block(block)
             .render(layout2[1], buf);
     }
@@ -174,31 +113,25 @@ impl Message {
             .begin_symbol(Some("◀"))
             .track_symbol(Some("─"));
 
-        let content_width = get_longest_string(&self.text);
-        let viewport_width = area.width as usize;
-        let scrollable_width = content_width.saturating_sub(viewport_width);
-        self.set_scrollable_width(scrollable_width);
-
-        let mut scrollbar_state =
-            ScrollbarState::new(scrollable_width).position(self.h_scroll_state);
+        let mut scrollbar_state = ScrollbarState::new(self.scroll_area).position(self.scroll_state);
 
         StatefulWidget::render(scrollbar, area, buf, &mut scrollbar_state);
     }
 
-    pub fn render_vertical_scrollbar(&mut self, area: Rect, buf: &mut Buffer) {
-        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
-            .begin_symbol(Some("▲"))
-            .end_symbol(Some("▼"))
-            .track_symbol(Some("│"));
-
-        let content_height = get_height(&self.text) as usize;
-        let viewport_height = area.height as usize;
-        let scrollable_height = content_height.saturating_sub(viewport_height);
-        self.set_scrollable_height(scrollable_height);
-
-        let mut scrollbar_state =
-            ScrollbarState::new(scrollable_height).position(self.v_scroll_state);
-
-        StatefulWidget::render(scrollbar, area, buf, &mut scrollbar_state);
-    }
+    // pub fn render_vertical_scrollbar(&mut self, area: Rect, buf: &mut Buffer) {
+    //     let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+    //         .begin_symbol(Some("▲"))
+    //         .end_symbol(Some("▼"))
+    //         .track_symbol(Some("│"));
+    //
+    //     let content_height = get_height(&self.text) as usize;
+    //     let viewport_height = area.height as usize;
+    //     let scrollable_height = content_height.saturating_sub(viewport_height);
+    //     self.set_scrollable_height(scrollable_height);
+    //
+    //     let mut scrollbar_state =
+    //         ScrollbarState::new(scrollable_height).position(self.v_scroll_state);
+    //
+    //     StatefulWidget::render(scrollbar, area, buf, &mut scrollbar_state);
+    // }
 }
