@@ -9,21 +9,24 @@ use crate::widgets::message::{Message, OFFSET};
 
 #[derive(Debug)]
 pub struct Chat {
-    pub height: usize,
+    pub selected_message_id: usize,
     pub messages: Vec<Message>,
+    /// the total height of the chat screen including the entire chat history
+    pub height: usize,
     /// used to render the scrollbar, represents where
     /// in the scroll_area that the scrollbar is located
     pub scroll_state: usize,
     /// used to render the scrollbar, it represents
-    /// how much space the scrollbar will have for scrolling.
+    /// how much space the scrollbar will have for scrolling
     pub scroll_area: usize,
 }
 
 impl Chat {
-    pub fn new(messages: Vec<String>) -> Self {
-        let messages = messages
+    pub fn new(input: Vec<String>) -> Self {
+        let messages: Vec<Message> = input
             .into_iter()
-            .map(|item| Message::new(item))
+            .enumerate()
+            .map(|(i, item)| Message::new(i, item))
             .collect();
 
         Self {
@@ -31,6 +34,7 @@ impl Chat {
             height: 0,
             scroll_area: 0,
             scroll_state: 0,
+            selected_message_id: 0,
         }
     }
 
@@ -108,11 +112,18 @@ impl Widget for &mut Chat {
                     height: clip_height as u16,
                 };
 
-                if clip_start > 0 {
-                    item.render_partial(rect, buf, (clip_start-1) as u16);
-                } else {
-                    item.render(rect, buf);
+                if item.text == "0: hello world" {
+                    info!("height {}", clip_height);
+                    info!("skip {}", clip_start)
                 }
+
+                if clip_start > 0 {
+                    item.set_skip_lines(clip_start as u16);
+                } else {
+                    item.set_skip_lines(0);
+                }
+
+                item.render(rect, buf);
             }
 
             y += h;

@@ -35,7 +35,49 @@ struct App {
 impl App {
     fn new() -> Self {
         let mut messages = Vec::new();
-        let msg = String::from("hello world");
+        let msg = String::from("0: hello world");
+        messages.push(msg);
+
+        let msg = String::from("1: hello world");
+        messages.push(msg);
+
+        let msg = String::from("2: hello world");
+        messages.push(msg);
+
+        let msg = String::from("3: hello world");
+        messages.push(msg);
+
+        let msg = String::from("4: hello world");
+        messages.push(msg);
+
+        let msg = String::from("5: hello world");
+        messages.push(msg);
+
+        let msg = String::from("6: hello world");
+        messages.push(msg);
+
+        let msg = String::from("7: hello world");
+        messages.push(msg);
+
+        let msg = String::from("8: hello world");
+        messages.push(msg);
+
+        let msg = String::from("9: hello world");
+        messages.push(msg);
+
+        let msg = String::from("10: hello world");
+        messages.push(msg);
+
+        let msg = String::from("11: hello world");
+        messages.push(msg);
+
+        let msg = String::from("12: hello world");
+        messages.push(msg);
+
+        let msg = String::from("13: hello world");
+        messages.push(msg);
+
+        let msg = String::from("14: hello world");
         messages.push(msg);
 
         let chat = Chat::new(messages);

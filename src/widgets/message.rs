@@ -1,9 +1,9 @@
-use log::info;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
     widgets::{
-        Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget
+        Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget,
+        Widget,
     },
 };
 
@@ -13,22 +13,28 @@ pub const OFFSET: usize = 2;
 
 #[derive(Debug)]
 pub struct Message {
+    pub id: usize,
+    pub is_selected: bool,
     pub text: String,
     pub height: u16,
     /// horizontal scroll position
     pub scroll_state: usize,
     /// horizontal scroll area
     pub scroll_area: usize,
+    pub skip_lines: u16,
 }
 
 impl Message {
-    pub fn new(text: String) -> Self {
+    pub fn new(id: usize, text: String) -> Self {
         let height = get_height(&text) as usize;
         Message {
+            id,
+            is_selected: false,
             text,
             height: height as u16,
             scroll_state: 0,
             scroll_area: 0,
+            skip_lines: 0,
         }
     }
 
@@ -38,6 +44,10 @@ impl Message {
         let scroll_area = width.saturating_sub(viewport_width);
 
         self.scroll_area = scroll_area;
+    }
+
+    pub fn set_skip_lines(&mut self, skip_lines: u16) {
+        self.skip_lines = skip_lines;
     }
 
     pub fn scroll_right(&mut self) -> () {
@@ -66,7 +76,7 @@ impl Message {
         StatefulWidget::render(scrollbar, area, buf, &mut scrollbar_state);
     }
 
-    pub fn render_partial(&mut self, area: Rect, buf: &mut Buffer, skip_lines: u16) {
+    pub fn render_partial(&mut self, area: Rect, buf: &mut Buffer) {
         self.prepare(area);
         let txt = self.text.clone();
 
@@ -74,7 +84,7 @@ impl Message {
 
         let layout = Layout::vertical([
             Constraint::Length(scroll_or_zero),
-            Constraint::Length(self.height - skip_lines),
+            Constraint::Length(self.height - self.skip_lines),
         ])
         .split(area);
 
@@ -83,7 +93,7 @@ impl Message {
         let block = Block::default().borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM);
 
         Paragraph::new(txt)
-            .scroll((skip_lines, self.scroll_state as u16))
+            .scroll((self.skip_lines, self.scroll_state as u16))
             .block(block)
             .render(layout[1], buf);
     }
@@ -98,15 +108,25 @@ impl Widget for &mut Message {
 
         let layout = Layout::vertical([
             Constraint::Length(scroll_or_zero),
-            Constraint::Length(self.height),
+            Constraint::Length(self.height - self.skip_lines),
         ])
         .split(area);
 
         self.render_horizontal_scrollbar(layout[0], buf);
 
-        let block = Block::bordered().title("System");
+        let mut block = Block::bordered().title("System");
+        if self.skip_lines > 0 {
+            block = Block::default().borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM);
+        }
+
+        let scroll = if self.skip_lines == 1 {
+            0
+        } else {
+            self.skip_lines
+        };
+
         Paragraph::new(txt)
-            .scroll((0, self.scroll_state as u16))
+            .scroll((scroll, self.scroll_state as u16))
             .block(block)
             .render(layout[1], buf);
     }
