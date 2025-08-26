@@ -1,6 +1,7 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
+    style::{Color, Style},
     widgets::{
         Block, Borders, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget,
         Widget,
@@ -75,32 +76,13 @@ impl Message {
 
         StatefulWidget::render(scrollbar, area, buf, &mut scrollbar_state);
     }
-
-    pub fn render_partial(&mut self, area: Rect, buf: &mut Buffer) {
-        self.prepare(area);
-        let txt = self.text.clone();
-
-        let scroll_or_zero = self.scroll_area.min(1) as u16;
-
-        let layout = Layout::vertical([
-            Constraint::Length(scroll_or_zero),
-            Constraint::Length(self.height - self.skip_lines),
-        ])
-        .split(area);
-
-        self.render_horizontal_scrollbar(layout[0], buf);
-
-        let block = Block::default().borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM);
-
-        Paragraph::new(txt)
-            .scroll((self.skip_lines, self.scroll_state as u16))
-            .block(block)
-            .render(layout[1], buf);
-    }
 }
 
 impl Widget for &mut Message {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        let green_fg: Style = Style::default().fg(Color::LightGreen);
+        let white_fg: Style = Style::default().fg(Color::White);
+
         self.prepare(area);
         let txt = self.text.clone();
 
@@ -114,7 +96,8 @@ impl Widget for &mut Message {
 
         self.render_horizontal_scrollbar(layout[0], buf);
 
-        let mut block = Block::bordered().title("System");
+        let selected_style = if self.is_selected { green_fg } else { white_fg };
+        let mut block = Block::bordered().style(selected_style).title("System");
         if self.skip_lines > 0 {
             block = Block::default().borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM);
         }

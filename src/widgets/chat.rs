@@ -23,11 +23,15 @@ pub struct Chat {
 
 impl Chat {
     pub fn new(input: Vec<String>) -> Self {
-        let messages: Vec<Message> = input
+        let mut messages: Vec<Message> = input
             .into_iter()
             .enumerate()
             .map(|(i, item)| Message::new(i, item))
             .collect();
+
+        if messages.len() > 0 {
+            messages[0].is_selected = true;
+        }
 
         Self {
             messages,
@@ -50,6 +54,27 @@ impl Chat {
             return;
         }
         self.scroll_state += 1;
+    }
+
+    pub fn select_next(&mut self) -> () {
+        if self.messages.len() <= self.selected_message_id {
+            return
+        }
+
+        self.messages[self.selected_message_id].is_selected = false;
+        self.selected_message_id += 1;
+        self.messages[self.selected_message_id].is_selected = true;
+    }
+
+    pub fn select_prev(&mut self) -> () {
+        if self.selected_message_id == 0 {
+            return
+        }
+
+        self.messages[self.selected_message_id].is_selected = false;
+        self.selected_message_id -= 1;
+        self.messages[self.selected_message_id].is_selected = true;
+
     }
 
     pub fn set_scroll_area(&mut self, scroll_area: usize) -> () {
@@ -111,11 +136,6 @@ impl Widget for &mut Chat {
                     width: chat_inner.width,
                     height: clip_height as u16,
                 };
-
-                if item.text == "0: hello world" {
-                    info!("height {}", clip_height);
-                    info!("skip {}", clip_start)
-                }
 
                 if clip_start > 0 {
                     item.set_skip_lines(clip_start as u16);
