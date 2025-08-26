@@ -1,4 +1,7 @@
-use crossterm::{event::{DisableMouseCapture, EnableMouseCapture}, execute};
+use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture},
+    execute,
+};
 use flexi_logger::{FileSpec, Logger, detailed_format};
 use ink::widgets::chat::Chat;
 use log::info;
@@ -41,28 +44,28 @@ struct App {
 impl App {
     fn new() -> Self {
         let mut messages = Vec::new();
-        let msg = String::from("0: hello world");
+        let msg = String::from("0: hello world\n\n");
         messages.push(msg);
 
-        let msg = String::from("1: hello world");
+        let msg = String::from("1: hello world\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("2: hello world");
+        let msg = String::from("2: hello world\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("3: hello world");
+        let msg = String::from("3: hello world\n\n");
         messages.push(msg);
 
-        let msg = String::from("4: hello world");
+        let msg = String::from("4: hello world\n");
         messages.push(msg);
 
-        let msg = String::from("5: hello world");
+        let msg = String::from("5: hello world\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("6: hello world");
+        let msg = String::from("6: hello world\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("7: hello world");
+        let msg = String::from("7: hello world\n\n\n\n");
         messages.push(msg);
 
         let msg = String::from("8: hello world");
@@ -108,34 +111,25 @@ impl App {
     }
 
     fn handle_events(&mut self) -> Result<()> {
-        EnableMouseCapture;
-        let ev = event::read()?;
-        info!("event: {:?}", ev);
-
-        match ev {
-            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
-                match key_event.code {
-                    KeyCode::Char('q') => self.exit(),
-                    KeyCode::Char('j') => self.chat.scroll_down(),
-                    KeyCode::Char('k') => self.chat.scroll_up(),
-                    KeyCode::Tab => self.chat.select_next(),
-                    KeyCode::BackTab => self.chat.select_prev(),
-                    _ => {}
+        match event::read()? {
+            Event::Key(key_event) => {
+                if key_event.kind == KeyEventKind::Press {
+                    match key_event.code {
+                        KeyCode::Char('q') => self.exit(),
+                        KeyCode::Char('j') => self.chat.scroll_down(),
+                        KeyCode::Char('k') => self.chat.scroll_up(),
+                        KeyCode::Tab => self.chat.select_next(),
+                        KeyCode::BackTab => self.chat.select_prev(),
+                        _ => {}
+                    }
                 }
             }
 
             Event::Mouse(mouse_event) => match mouse_event.kind {
-                MouseEventKind::ScrollUp => {
-                    info!("scroll up");
-                    self.chat.scroll_up()
-                }
-                MouseEventKind::ScrollDown => {
-                    info!("scroll down");
-                    self.chat.scroll_down()
-                }
+                MouseEventKind::ScrollUp => self.chat.scroll_up(),
+                MouseEventKind::ScrollDown => self.chat.scroll_down(),
                 _ => {}
             },
-
             _ => {}
         }
 

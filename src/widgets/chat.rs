@@ -1,4 +1,3 @@
-use log::info;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -42,23 +41,27 @@ impl Chat {
         }
     }
 
-    pub fn scroll_up(&mut self) -> () {
+    pub fn scroll_up(&mut self) {
         if self.scroll_state == 0 {
             return;
         }
         self.scroll_state -= 1
     }
 
-    pub fn scroll_down(&mut self) -> () {
+    pub fn scroll_down(&mut self) {
         if self.scroll_state > self.scroll_area {
             return;
         }
         self.scroll_state += 1;
     }
 
-    pub fn select_next(&mut self) -> () {
-        if self.messages.len() <= self.selected_message_id {
-            return
+    pub fn select_next(&mut self) {
+        if self.messages.is_empty() {
+            return;
+        }
+
+        if self.selected_message_id + 1 >= self.messages.len() {
+            return;
         }
 
         self.messages[self.selected_message_id].is_selected = false;
@@ -66,15 +69,14 @@ impl Chat {
         self.messages[self.selected_message_id].is_selected = true;
     }
 
-    pub fn select_prev(&mut self) -> () {
-        if self.selected_message_id == 0 {
-            return
+    pub fn select_prev(&mut self) {
+        if self.messages.is_empty() || self.selected_message_id == 0 {
+            return;
         }
 
         self.messages[self.selected_message_id].is_selected = false;
         self.selected_message_id -= 1;
         self.messages[self.selected_message_id].is_selected = true;
-
     }
 
     pub fn set_scroll_area(&mut self, scroll_area: usize) -> () {

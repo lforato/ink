@@ -99,7 +99,9 @@ impl Widget for &mut Message {
         let selected_style = if self.is_selected { green_fg } else { white_fg };
         let mut block = Block::bordered().style(selected_style).title("System");
         if self.skip_lines > 0 {
-            block = Block::default().borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM);
+            block = Block::default()
+                .style(selected_style)
+                .borders(Borders::LEFT | Borders::RIGHT | Borders::BOTTOM);
         }
 
         let scroll = if self.skip_lines == 1 {
