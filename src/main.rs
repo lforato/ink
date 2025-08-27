@@ -44,25 +44,25 @@ struct App {
 impl App {
     fn new() -> Self {
         let mut messages = Vec::new();
-        let msg = String::from("0: hello world\n\n");
+        let msg = String::from("0: hello worlddd\n\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("1: hello world\n\n\n");
+        let msg = String::from("1: hello world\n\n\n\n\n\n\n\n");
         messages.push(msg);
 
         let msg = String::from("2: hello world\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("3: hello world\n\n");
+        let msg = String::from("3: hello world\n\n\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("4: hello world\n");
+        let msg = String::from("4: hello world\n\n\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("5: hello world\n\n\n\n");
+        let msg = String::from("5: hello world\n\n\n\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("6: hello world\n\n\n\n");
+        let msg = String::from("6: hello world\n\n\n\n\n\n\n\n\n\n\n\n");
         messages.push(msg);
 
         let msg = String::from("7: hello world\n\n\n\n");

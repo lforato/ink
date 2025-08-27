@@ -6,6 +6,7 @@ use ratatui::{
 
 use crate::widgets::message::{Message, OFFSET};
 
+
 #[derive(Debug)]
 pub struct Chat {
     pub selected_message_id: usize,
@@ -19,6 +20,8 @@ pub struct Chat {
     /// how much space the scrollbar will have for scrolling
     pub scroll_area: usize,
 }
+
+pub const MARGIN: i32 = 1;
 
 impl Chat {
     pub fn new(input: Vec<String>) -> Self {
@@ -119,6 +122,8 @@ impl Widget for &mut Chat {
         let visible_height = chat_inner.height as i32;
 
         let mut y = chat_inner.y as i32;
+        let mut new_id = self.selected_message_id;
+        let len = self.messages.len();
 
         for item in self.messages.iter_mut() {
             let h = item.height as i32;
@@ -126,10 +131,23 @@ impl Widget for &mut Chat {
             let msg_top = y - chat_inner.y as i32;
             let msg_bottom = msg_top + h;
 
+            // if we could see the entire page, what line is the last one that is visible at the
+            // moment.
+            // ex:
+            // 1
+            // 2 | top
+            // 3 | bottom
+            // 4
+            // 5
+            // we can say in the example that visible_bottom is 3 because it is the last line
+            // visible, and we can say that 2 is the visible_top for the same reason
+
             let visible_top = scroll_top.max(msg_top);
             let visible_bottom = (scroll_top + visible_height) as i32;
-            let clip_start = (visible_top - msg_top).max(0);
+
+            // this is the height that is still on screen
             let clip_height = (msg_bottom.min(visible_bottom) - visible_top).max(0);
+            let clip_start = (visible_top - msg_top).max(0);
 
             if clip_height > 0 {
                 let rect = Rect {
@@ -139,17 +157,31 @@ impl Widget for &mut Chat {
                     height: clip_height as u16,
                 };
 
-                if clip_start > 0 {
-                    item.set_skip_lines(clip_start as u16);
-                } else {
-                    item.set_skip_lines(0);
-                }
+                item.set_skip_lines(clip_start as u16);
 
                 item.render(rect, buf);
             }
 
+            let msg_top_hit_bottom = msg_top + MARGIN == visible_bottom;
+            if msg_top_hit_bottom && item.is_selected && item.id > 0 {
+                new_id -= 1;
+                item.is_selected = false;
+            }
+
+            // this is working fine
+            let msg_bottom_hit_top = msg_bottom == visible_top + MARGIN;
+            if msg_bottom_hit_top && item.is_selected {
+                if item.id + 1 < len {
+                    new_id += 1;
+                    item.is_selected = false;
+                }
+            }
+
             y += h;
         }
+
+        self.selected_message_id = new_id;
+        self.messages[new_id].is_selected = true;
 
         self.render_vertical_scrollbar(layout[2], buf);
     }
