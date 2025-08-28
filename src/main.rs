@@ -12,7 +12,10 @@ use ratatui::{
     layout::Rect,
     widgets::Widget,
 };
-use std::io::{self, Result, stdout};
+use std::{
+    io::{self, Result, stdout},
+    time::Duration,
+};
 
 fn main() -> io::Result<()> {
     Logger::try_with_str("info")
@@ -111,6 +114,12 @@ impl App {
     }
 
     fn handle_events(&mut self) -> Result<()> {
+        if let Ok(has_event) = event::poll(Duration::from_millis(100)) {
+            if !has_event {
+                return Ok(());
+            }
+        }
+
         match event::read()? {
             Event::Key(key_event) => {
                 if key_event.kind == KeyEventKind::Press {

@@ -4,13 +4,15 @@ use ratatui::{
     widgets::{Block, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget},
 };
 
-use crate::widgets::message::{Message, OFFSET};
-
+use crate::widgets::{
+    message::{Message, OFFSET}, textarea::TextArea,
+};
 
 #[derive(Debug)]
 pub struct Chat {
     pub selected_message_id: usize,
     pub messages: Vec<Message>,
+    pub textarea: TextArea,
     /// the total height of the chat screen including the entire chat history
     pub height: usize,
     /// used to render the scrollbar, represents where
@@ -35,8 +37,11 @@ impl Chat {
             messages[0].is_selected = true;
         }
 
+        let textarea = TextArea::new();
+
         Self {
             messages,
+            textarea,
             height: 0,
             scroll_area: 0,
             scroll_state: 0,
@@ -115,15 +120,27 @@ impl Widget for &mut Chat {
         Block::bordered().render(layout[1], buf);
         let chat_inner = Block::bordered().inner(layout[1]);
 
+        let chat_inner_layout = Layout::vertical([
+            Constraint::Percentage(100),
+            Constraint::Length(self.textarea.height),
+        ])
+        .split(chat_inner);
+
+        // this is where we are placing the messages
+        let chat_inner = chat_inner_layout[0];
+        let chat_textarea = chat_inner_layout[1];
+
         let total_height: u16 = self.messages.iter().map(|m| m.height).sum();
         self.height = total_height as usize + OFFSET;
 
         let scroll_top = self.scroll_state as i32;
-        let visible_height = chat_inner.height as i32;
+        let visible_height = chat_inner_layout[0].height as i32;
 
         let mut y = chat_inner.y as i32;
         let mut new_id = self.selected_message_id;
         let len = self.messages.len();
+
+        self.textarea.render(chat_textarea, buf);
 
         for item in self.messages.iter_mut() {
             let h = item.height as i32;
@@ -168,7 +185,6 @@ impl Widget for &mut Chat {
                 item.is_selected = false;
             }
 
-            // this is working fine
             let msg_bottom_hit_top = msg_bottom == visible_top + MARGIN;
             if msg_bottom_hit_top && item.is_selected {
                 if item.id + 1 < len {
