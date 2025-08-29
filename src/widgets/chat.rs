@@ -1,18 +1,22 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
+    style::{Color, Style},
     widgets::{Block, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget},
 };
+use tui_textarea::TextArea;
 
 use crate::widgets::{
-    message::{Message, OFFSET}, textarea::TextArea,
+    chat,
+    message::{Message, OFFSET},
 };
 
 #[derive(Debug)]
-pub struct Chat {
+pub struct Chat<'a> {
     pub selected_message_id: usize,
     pub messages: Vec<Message>,
-    pub textarea: TextArea,
+    pub textarea: TextArea<'a>,
+    pub is_textarea_selected: bool,
     /// the total height of the chat screen including the entire chat history
     pub height: usize,
     /// used to render the scrollbar, represents where
@@ -25,7 +29,7 @@ pub struct Chat {
 
 pub const MARGIN: i32 = 1;
 
-impl Chat {
+impl<'a> Chat<'a> {
     pub fn new(input: Vec<String>) -> Self {
         let mut messages: Vec<Message> = input
             .into_iter()
@@ -37,11 +41,12 @@ impl Chat {
             messages[0].is_selected = true;
         }
 
-        let textarea = TextArea::new();
+        let textarea = TextArea::default();
 
         Self {
             messages,
             textarea,
+            is_textarea_selected: true,
             height: 0,
             scroll_area: 0,
             scroll_state: 0,
@@ -108,7 +113,7 @@ impl Chat {
     }
 }
 
-impl Widget for &mut Chat {
+impl<'a> Widget for &mut Chat<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let layout = Layout::horizontal([
             Constraint::Percentage(5),
@@ -120,11 +125,9 @@ impl Widget for &mut Chat {
         Block::bordered().render(layout[1], buf);
         let chat_inner = Block::bordered().inner(layout[1]);
 
-        let chat_inner_layout = Layout::vertical([
-            Constraint::Percentage(100),
-            Constraint::Length(self.textarea.height),
-        ])
-        .split(chat_inner);
+        let chat_inner_layout =
+            Layout::vertical([Constraint::Percentage(100), Constraint::Length(20)])
+                .split(chat_inner);
 
         // this is where we are placing the messages
         let chat_inner = chat_inner_layout[0];
@@ -140,7 +143,17 @@ impl Widget for &mut Chat {
         let mut new_id = self.selected_message_id;
         let len = self.messages.len();
 
-        self.textarea.render(chat_textarea, buf);
+        let selected_style = if self.is_textarea_selected {
+            Style::default().fg(Color::LightGreen)
+        } else {
+            Style::default().fg(Color::White)
+        };
+
+        let text_area_block = Block::bordered().inner(chat_textarea);
+        Block::bordered()
+            .style(selected_style)
+            .render(chat_textarea, buf);
+        self.textarea.render(text_area_block, buf);
 
         for item in self.messages.iter_mut() {
             let h = item.height as i32;

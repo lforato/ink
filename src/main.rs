@@ -39,12 +39,12 @@ fn main() -> io::Result<()> {
 }
 
 #[derive(Debug)]
-struct App {
+struct App<'a> {
     pub exit: bool,
-    pub chat: Chat,
+    pub chat: Chat<'a>,
 }
 
-impl App {
+impl<'a> App<'a> {
     fn new() -> Self {
         let mut messages = Vec::new();
         let msg = String::from("0: hello worlddd\n\n\n\n\n");
@@ -120,33 +120,42 @@ impl App {
             }
         }
 
-        match event::read()? {
-            Event::Key(key_event) => {
-                if key_event.kind == KeyEventKind::Press {
-                    match key_event.code {
-                        KeyCode::Char('q') => self.exit(),
-                        KeyCode::Char('j') => self.chat.scroll_down(),
-                        KeyCode::Char('k') => self.chat.scroll_up(),
-                        KeyCode::Tab => self.chat.select_next(),
-                        KeyCode::BackTab => self.chat.select_prev(),
-                        _ => {}
+        if self.chat.is_textarea_selected {
+            if let Event::Key(key) = event::read()? {
+                if key.code == KeyCode::Char('q') {
+                    self.exit();
+                }
+                self.chat.textarea.input(key);
+            }
+        } else {
+            match event::read()? {
+                Event::Key(key_event) => {
+                    if key_event.kind == KeyEventKind::Press {
+                        match key_event.code {
+                            KeyCode::Char('q') => self.exit(),
+                            KeyCode::Char('j') => self.chat.scroll_down(),
+                            KeyCode::Char('k') => self.chat.scroll_up(),
+                            KeyCode::Tab => self.chat.select_next(),
+                            KeyCode::BackTab => self.chat.select_prev(),
+                            _ => {}
+                        }
                     }
                 }
-            }
 
-            Event::Mouse(mouse_event) => match mouse_event.kind {
-                MouseEventKind::ScrollUp => self.chat.scroll_up(),
-                MouseEventKind::ScrollDown => self.chat.scroll_down(),
+                Event::Mouse(mouse_event) => match mouse_event.kind {
+                    MouseEventKind::ScrollUp => self.chat.scroll_up(),
+                    MouseEventKind::ScrollDown => self.chat.scroll_down(),
+                    _ => {}
+                },
                 _ => {}
-            },
-            _ => {}
+            }
         }
 
         Ok(())
     }
 }
 
-impl Widget for &mut App {
+impl<'a> Widget for &mut App<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.chat.render(area, buf);
     }
