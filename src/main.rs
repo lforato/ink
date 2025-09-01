@@ -2,18 +2,18 @@ use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
 };
-use flexi_logger::{FileSpec, Logger, detailed_format};
+use flexi_logger::{detailed_format, FileSpec, Logger};
 use ink::widgets::chat::Chat;
 use log::info;
 use ratatui::{
-    DefaultTerminal, Frame,
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseEventKind},
     layout::Rect,
     widgets::Widget,
+    DefaultTerminal, Frame,
 };
 use std::{
-    io::{self, Result, stdout},
+    io::{self, stdout, Result},
     time::Duration,
 };
 
@@ -120,12 +120,12 @@ impl<'a> App<'a> {
             }
         }
 
-        if self.chat.is_textarea_selected {
+        if self.chat.textarea.is_selected {
             if let Event::Key(key) = event::read()? {
-                if key.code == KeyCode::Char('q') {
-                    self.exit();
+                if key.code == KeyCode::Esc {
+                    self.chat.textarea.is_selected = false
                 }
-                self.chat.textarea.input(key);
+                self.chat.textarea.area.input(key);
             }
         } else {
             match event::read()? {

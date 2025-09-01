@@ -80,9 +80,6 @@ impl Message {
 
 impl Widget for &mut Message {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let green_fg: Style = Style::default().fg(Color::LightGreen);
-        let white_fg: Style = Style::default().fg(Color::White);
-
         self.prepare(area);
         let txt = self.text.clone();
 
@@ -96,7 +93,11 @@ impl Widget for &mut Message {
 
         self.render_horizontal_scrollbar(layout[0], buf);
 
-        let selected_style = if self.is_selected { green_fg } else { white_fg };
+        let selected_style = if self.is_selected {
+            Style::default().fg(Color::LightGreen)
+        } else {
+            Style::default().fg(Color::White)
+        };
         let mut block = Block::bordered().style(selected_style).title("System");
         if self.skip_lines > 0 {
             block = Block::default()

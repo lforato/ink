@@ -1,14 +1,12 @@
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
-    style::{Color, Style},
     widgets::{Block, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget},
 };
-use tui_textarea::TextArea;
 
 use crate::widgets::{
-    chat,
     message::{Message, OFFSET},
+    textarea::TextArea,
 };
 
 #[derive(Debug)]
@@ -16,7 +14,6 @@ pub struct Chat<'a> {
     pub selected_message_id: usize,
     pub messages: Vec<Message>,
     pub textarea: TextArea<'a>,
-    pub is_textarea_selected: bool,
     /// the total height of the chat screen including the entire chat history
     pub height: usize,
     /// used to render the scrollbar, represents where
@@ -46,7 +43,6 @@ impl<'a> Chat<'a> {
         Self {
             messages,
             textarea,
-            is_textarea_selected: true,
             height: 0,
             scroll_area: 0,
             scroll_state: 0,
@@ -58,7 +54,7 @@ impl<'a> Chat<'a> {
         if self.scroll_state == 0 {
             return;
         }
-        self.scroll_state -= 1
+        self.scroll_state -= 1;
     }
 
     pub fn scroll_down(&mut self) {
@@ -96,13 +92,17 @@ impl<'a> Chat<'a> {
         self.scroll_area = scroll_area;
     }
 
-    pub fn render_vertical_scrollbar(&mut self, area: Rect, buf: &mut Buffer) {
+    pub fn render_vertical_scrollbar(
+        &mut self,
+        area: Rect,
+        buf: &mut Buffer,
+        viewport_height: usize,
+    ) {
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .begin_symbol(Some("▲"))
             .end_symbol(Some("▼"))
             .track_symbol(Some("│"));
 
-        let viewport_height = area.height as usize;
         let scrollable_height = self.height.saturating_sub(viewport_height);
         self.set_scroll_area(scrollable_height);
 
@@ -126,10 +126,9 @@ impl<'a> Widget for &mut Chat<'a> {
         let chat_inner = Block::bordered().inner(layout[1]);
 
         let chat_inner_layout =
-            Layout::vertical([Constraint::Percentage(100), Constraint::Length(20)])
+            Layout::vertical([Constraint::Percentage(100), Constraint::Length(10)])
                 .split(chat_inner);
 
-        // this is where we are placing the messages
         let chat_inner = chat_inner_layout[0];
         let chat_textarea = chat_inner_layout[1];
 
@@ -137,23 +136,13 @@ impl<'a> Widget for &mut Chat<'a> {
         self.height = total_height as usize + OFFSET;
 
         let scroll_top = self.scroll_state as i32;
-        let visible_height = chat_inner_layout[0].height as i32;
+        let visible_height = chat_inner.height as i32;
 
         let mut y = chat_inner.y as i32;
         let mut new_id = self.selected_message_id;
         let len = self.messages.len();
 
-        let selected_style = if self.is_textarea_selected {
-            Style::default().fg(Color::LightGreen)
-        } else {
-            Style::default().fg(Color::White)
-        };
-
-        let text_area_block = Block::bordered().inner(chat_textarea);
-        Block::bordered()
-            .style(selected_style)
-            .render(chat_textarea, buf);
-        self.textarea.render(text_area_block, buf);
+        self.textarea.render(chat_textarea, buf);
 
         for item in self.messages.iter_mut() {
             let h = item.height as i32;
@@ -212,6 +201,6 @@ impl<'a> Widget for &mut Chat<'a> {
         self.selected_message_id = new_id;
         self.messages[new_id].is_selected = true;
 
-        self.render_vertical_scrollbar(layout[2], buf);
+        self.render_vertical_scrollbar(layout[2], buf, chat_inner.height as usize);
     }
 }
