@@ -3,9 +3,7 @@ use crossterm::{
     execute,
 };
 use flexi_logger::{FileSpec, Logger, detailed_format};
-use futures_util::StreamExt;
-use futures_util::lock::Mutex;
-use ink::{api::ask_question, widgets::chat::Chat};
+use ink::{widgets::chat::Chat};
 use log::info;
 use ratatui::{
     DefaultTerminal, Frame,
@@ -14,14 +12,11 @@ use ratatui::{
     layout::Rect,
     widgets::Widget,
 };
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::{
     io::{Result as Resultt, stdout},
-    sync::Arc,
     time::Duration,
 };
-use tokio::task;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -49,8 +44,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 struct App<'a> {
     pub exit: bool,
     pub chat: Chat<'a>,
-    pub generating_response: bool,
-    pub response: Arc<Mutex<String>>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Default)]
@@ -90,8 +83,6 @@ impl<'a> App<'a> {
         Self {
             chat,
             exit: false,
-            generating_response: false,
-            response: Arc::new(Mutex::new(String::from(""))),
         }
     }
 
@@ -132,7 +123,7 @@ impl<'a> App<'a> {
                     self.chat.textarea.area.cut();
                     self.chat.push_msg(self.chat.textarea.area.yank_text());
                     self.chat.textarea.area.set_yank_text("");
-                    self.start_generating()
+                    self.chat.start_generating();
                 }
                 self.chat.textarea.area.input(key);
             }
@@ -162,45 +153,10 @@ impl<'a> App<'a> {
 
         Ok(())
     }
-
-    fn start_generating(&mut self) {
-        if self.generating_response {
-            return;
-        }
-
-        self.generating_response = true;
-        let response = self.response.clone();
-
-        task::spawn(async move {
-            info!("task started");
-            let client = Client::new();
-            let bytes = client
-                .post("http://localhost:11434/api/chat")
-                .body(r#"{ "model": "deepseek-r1:8b", "messages": [{ "role": "system", "content": "You are a helpful assistant." }, { "role": "user", "content": "Tell me a joke about penguins." }] }"#)
-                .header("Content-Type", "application/json")
-                .send()
-                .await
-                .unwrap();
-
-            let mut stream = bytes.bytes_stream();
-
-            while let Some(chunk) = stream.next().await {
-                if let Ok(chunk) = chunk {
-                    let text = String::from_utf8_lossy(chunk.as_ref()).to_string();
-                    if let Ok(parsed) = serde_json::from_str::<Chunk>(&text) {
-                        let mut buf = response.try_lock().unwrap();
-                        buf.push_str(&parsed.message.content);
-                    }
-                }
-            }
-        });
-    }
 }
 
 impl<'a> Widget for &mut App<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let res = self.response.try_lock().unwrap();
-        info!("{:?}", res);
         self.chat.render(area, buf);
     }
 }

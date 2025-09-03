@@ -23,10 +23,11 @@ pub struct Message {
     /// horizontal scroll area
     pub scroll_area: usize,
     pub skip_lines: u16,
+    pub generating: bool
 }
 
 impl Message {
-    pub fn new(id: usize, text: String) -> Self {
+    pub fn new(id: usize, text: String, generating: bool) -> Self {
         let height = get_height(&text) as usize;
         Message {
             id,
@@ -36,6 +37,7 @@ impl Message {
             scroll_state: 0,
             scroll_area: 0,
             skip_lines: 0,
+            generating: generating,
         }
     }
 
