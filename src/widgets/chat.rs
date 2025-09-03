@@ -22,6 +22,8 @@ pub struct Chat<'a> {
     /// used to render the scrollbar, it represents
     /// how much space the scrollbar will have for scrolling
     pub scroll_area: usize,
+    /// if the LLM is generating the response
+    pub generating_response: bool
 }
 
 pub const MARGIN: i32 = 1;
@@ -47,6 +49,7 @@ impl<'a> Chat<'a> {
             scroll_area: 0,
             scroll_state: 0,
             selected_message_id: 0,
+            generating_response: false,
         }
     }
 
@@ -90,6 +93,21 @@ impl<'a> Chat<'a> {
 
     pub fn set_scroll_area(&mut self, scroll_area: usize) -> () {
         self.scroll_area = scroll_area;
+    }
+
+    pub fn push_msg(&mut self, value: String) -> usize {
+        let idx = self.messages.len();
+        let msg = Message::new(idx, value);
+        self.messages.push(msg);
+        idx
+    }
+
+    pub fn alter_msg(&mut self, idx: usize, value: String) -> Result<(), &str> {
+        if self.messages.len() <= idx {
+            return Err("Failed to alter message");
+        }
+        self.messages[idx] = Message::new(idx, value);
+        Ok(())
     }
 
     pub fn render_vertical_scrollbar(

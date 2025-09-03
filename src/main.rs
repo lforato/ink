@@ -2,22 +2,29 @@ use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
 };
-use flexi_logger::{detailed_format, FileSpec, Logger};
-use ink::widgets::chat::Chat;
+use flexi_logger::{FileSpec, Logger, detailed_format};
+use futures_util::StreamExt;
+use futures_util::lock::Mutex;
+use ink::{api::ask_question, widgets::chat::Chat};
 use log::info;
 use ratatui::{
+    DefaultTerminal, Frame,
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEventKind, MouseEventKind},
     layout::Rect,
     widgets::Widget,
-    DefaultTerminal, Frame,
 };
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
 use std::{
-    io::{self, stdout, Result},
+    io::{Result as Resultt, stdout},
+    sync::Arc,
     time::Duration,
 };
+use tokio::task;
 
-fn main() -> io::Result<()> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Logger::try_with_str("info")
         .unwrap()
         .log_to_file(FileSpec::default().directory("logs"))
@@ -42,6 +49,34 @@ fn main() -> io::Result<()> {
 struct App<'a> {
     pub exit: bool,
     pub chat: Chat<'a>,
+    pub generating_response: bool,
+    pub response: Arc<Mutex<String>>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Default)]
+struct Chunk {
+    model: String,
+    created_at: String,
+    done: bool,
+    message: Msg,
+}
+
+#[derive(Deserialize, Serialize, Debug, Default)]
+struct Msg {
+    role: String,
+    content: String,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+enum Role {
+    System,
+    User,
+}
+
+impl Default for Role {
+    fn default() -> Self {
+        Self::System
+    }
 }
 
 impl<'a> App<'a> {
@@ -50,58 +85,21 @@ impl<'a> App<'a> {
         let msg = String::from("0: hello worlddd\n\n\n\n\n");
         messages.push(msg);
 
-        let msg = String::from("1: hello world\n\n\n\n\n\n\n\n");
-        messages.push(msg);
-
-        let msg = String::from("2: hello world\n\n\n\n");
-        messages.push(msg);
-
-        let msg = String::from("3: hello world\n\n\n\n\n\n");
-        messages.push(msg);
-
-        let msg = String::from("4: hello world\n\n\n\n\n\n");
-        messages.push(msg);
-
-        let msg = String::from("5: hello world\n\n\n\n\n\n\n");
-        messages.push(msg);
-
-        let msg = String::from("6: hello world\n\n\n\n\n\n\n\n\n\n\n\n");
-        messages.push(msg);
-
-        let msg = String::from("7: hello world\n\n\n\n");
-        messages.push(msg);
-
-        let msg = String::from("8: hello world");
-        messages.push(msg);
-
-        let msg = String::from("9: hello world");
-        messages.push(msg);
-
-        let msg = String::from("10: hello world");
-        messages.push(msg);
-
-        let msg = String::from("11: hello world");
-        messages.push(msg);
-
-        let msg = String::from("12: hello world");
-        messages.push(msg);
-
-        let msg = String::from("13: hello world");
-        messages.push(msg);
-
-        let msg = String::from("14: hello world");
-        messages.push(msg);
-
         let chat = Chat::new(messages);
 
-        Self { chat, exit: false }
+        Self {
+            chat,
+            exit: false,
+            generating_response: false,
+            response: Arc::new(Mutex::new(String::from(""))),
+        }
     }
 
     fn exit(&mut self) {
         self.exit = true
     }
 
-    fn run(&mut self, term: &mut DefaultTerminal) -> Result<()> {
+    fn run(&mut self, term: &mut DefaultTerminal) -> Result<(), Box<dyn std::error::Error>> {
         while !self.exit {
             term.draw(|frame| self.draw(frame))?;
             self.handle_events()?;
@@ -113,7 +111,7 @@ impl<'a> App<'a> {
         frame.render_widget(self, frame.area());
     }
 
-    fn handle_events(&mut self) -> Result<()> {
+    fn handle_events(&mut self) -> Resultt<()> {
         if let Ok(has_event) = event::poll(Duration::from_millis(100)) {
             if !has_event {
                 return Ok(());
@@ -124,6 +122,17 @@ impl<'a> App<'a> {
             if let Event::Key(key) = event::read()? {
                 if key.code == KeyCode::Esc {
                     self.chat.textarea.is_selected = false
+                }
+                if key.code == KeyCode::Enter {
+                    // TODO -> this needs to be improved, the textarea is not restarting to the
+                    // initial state when the message is sent
+                    // There is also an unecessary newline character that should not exist in the
+                    // sent message
+                    self.chat.textarea.area.select_all();
+                    self.chat.textarea.area.cut();
+                    self.chat.push_msg(self.chat.textarea.area.yank_text());
+                    self.chat.textarea.area.set_yank_text("");
+                    self.start_generating()
                 }
                 self.chat.textarea.area.input(key);
             }
@@ -153,10 +162,45 @@ impl<'a> App<'a> {
 
         Ok(())
     }
+
+    fn start_generating(&mut self) {
+        if self.generating_response {
+            return;
+        }
+
+        self.generating_response = true;
+        let response = self.response.clone();
+
+        task::spawn(async move {
+            info!("task started");
+            let client = Client::new();
+            let bytes = client
+                .post("http://localhost:11434/api/chat")
+                .body(r#"{ "model": "deepseek-r1:8b", "messages": [{ "role": "system", "content": "You are a helpful assistant." }, { "role": "user", "content": "Tell me a joke about penguins." }] }"#)
+                .header("Content-Type", "application/json")
+                .send()
+                .await
+                .unwrap();
+
+            let mut stream = bytes.bytes_stream();
+
+            while let Some(chunk) = stream.next().await {
+                if let Ok(chunk) = chunk {
+                    let text = String::from_utf8_lossy(chunk.as_ref()).to_string();
+                    if let Ok(parsed) = serde_json::from_str::<Chunk>(&text) {
+                        let mut buf = response.try_lock().unwrap();
+                        buf.push_str(&parsed.message.content);
+                    }
+                }
+            }
+        });
+    }
 }
 
 impl<'a> Widget for &mut App<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        let res = self.response.try_lock().unwrap();
+        info!("{:?}", res);
         self.chat.render(area, buf);
     }
 }
