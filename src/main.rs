@@ -90,22 +90,7 @@ impl<'a> App<'a> {
             }
         }
 
-        if self.chat.textarea.is_selected {
-            if let Event::Key(key) = event::read()? {
-                if key.code == KeyCode::Esc {
-                    self.chat.textarea.is_selected = false
-                }
-                if key.code == KeyCode::Enter {
-                    self.chat.textarea.area.select_all();
-                    self.chat.textarea.area.cut();
-                    self.chat
-                        .push_user_message(self.chat.textarea.area.yank_text());
-                    self.chat.textarea.area.set_yank_text("");
-                    self.chat.start_generating();
-                }
-                self.chat.textarea.area.input(key);
-            }
-        } else {
+        if !self.chat.textarea.is_selected {
             match event::read()? {
                 Event::Key(key_event) => {
                     if key_event.kind == KeyEventKind::Press {

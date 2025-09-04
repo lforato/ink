@@ -1,19 +1,22 @@
+use crate::widgets::{
+    message::{Message, OFFSET, Role},
+    textarea::TextArea,
+};
 use futures_util::stream::StreamExt;
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
-use tokio::task;
-
+use ratatui::crossterm::event::{self, Event, KeyCode};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
     widgets::{Block, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget},
 };
-
-use crate::widgets::{
-    message::{Message, OFFSET, Role},
-    textarea::TextArea,
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use std::{
+    io::Result,
+    sync::{Arc, Mutex},
+    time::Duration,
 };
+use tokio::task;
 
 #[derive(Debug)]
 pub struct Chat<'a> {
@@ -89,6 +92,32 @@ impl<'a> Chat<'a> {
             generating_response: Arc::new(Mutex::new(false)),
             response: Arc::new(Mutex::new(String::from(""))),
         }
+    }
+
+    fn handle_events(&mut self) -> Result<()> {
+        if let Ok(has_event) = event::poll(Duration::from_millis(100)) {
+            if !has_event {
+                return Ok(());
+            }
+        }
+
+        if self.textarea.is_selected {
+            if let Event::Key(key) = event::read()? {
+                if key.code == KeyCode::Esc {
+                    self.textarea.is_selected = false
+                }
+                if key.code == KeyCode::Enter {
+                    self.textarea.area.select_all();
+                    self.textarea.area.cut();
+                    self.push_user_message(self.textarea.area.yank_text());
+                    self.textarea.area.set_yank_text("");
+                    self.start_generating();
+                }
+                self.textarea.area.input(key);
+            }
+        }
+
+        Ok(())
     }
 
     pub fn scroll_up(&mut self) {
@@ -219,6 +248,8 @@ impl<'a> Chat<'a> {
 
 impl<'a> Widget for &mut Chat<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
+        self.handle_events().unwrap();
+
         // we are still generating the answer
         // from the LLM
         if *self.generating_response.lock().unwrap() {
