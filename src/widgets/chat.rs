@@ -274,7 +274,7 @@ impl<'a> Widget for &mut Chat<'a> {
             let msg_bottom = msg_top + h;
 
             // if we could see the entire page, what line is the last one that is visible at the
-            // moment.
+            // moment?
             // ex:
             // 1
             // 2 | top
@@ -322,7 +322,9 @@ impl<'a> Widget for &mut Chat<'a> {
         }
 
         self.selected_message_id = new_id;
-        self.messages[new_id].is_selected = true;
+        if !self.messages.is_empty() {
+            self.messages[new_id].is_selected = true;
+        }
 
         self.render_vertical_scrollbar(layout[2], buf, chat_inner.height as usize);
     }
