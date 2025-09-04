@@ -3,7 +3,7 @@ use crossterm::{
     execute,
 };
 use flexi_logger::{FileSpec, Logger, detailed_format};
-use ink::{widgets::chat::Chat};
+use ink::widgets::{chat::Chat, message::Role};
 use log::info;
 use ratatui::{
     DefaultTerminal, Frame,
@@ -60,30 +60,11 @@ struct Msg {
     content: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)]
-enum Role {
-    System,
-    User,
-}
-
-impl Default for Role {
-    fn default() -> Self {
-        Self::System
-    }
-}
-
 impl<'a> App<'a> {
     fn new() -> Self {
-        let mut messages = Vec::new();
-        let msg = String::from("0: hello worlddd\n\n\n\n\n");
-        messages.push(msg);
+        let chat = Chat::new(Vec::new());
 
-        let chat = Chat::new(messages);
-
-        Self {
-            chat,
-            exit: false,
-        }
+        Self { chat, exit: false }
     }
 
     fn exit(&mut self) {
@@ -115,13 +96,10 @@ impl<'a> App<'a> {
                     self.chat.textarea.is_selected = false
                 }
                 if key.code == KeyCode::Enter {
-                    // TODO -> this needs to be improved, the textarea is not restarting to the
-                    // initial state when the message is sent
-                    // There is also an unecessary newline character that should not exist in the
-                    // sent message
                     self.chat.textarea.area.select_all();
                     self.chat.textarea.area.cut();
-                    self.chat.push_msg(self.chat.textarea.area.yank_text());
+                    self.chat
+                        .push_user_message(self.chat.textarea.area.yank_text());
                     self.chat.textarea.area.set_yank_text("");
                     self.chat.start_generating();
                 }

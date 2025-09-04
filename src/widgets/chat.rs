@@ -1,18 +1,17 @@
-use futures_util::StreamExt;
+use futures_util::stream::StreamExt;
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
+use tokio::task;
 
-use log::info;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
     widgets::{Block, Scrollbar, ScrollbarOrientation, ScrollbarState, StatefulWidget, Widget},
 };
-use reqwest::Client;
-use tokio::task;
 
 use crate::widgets::{
-    message::{Message, OFFSET},
+    message::{Message, OFFSET, Role},
     textarea::TextArea,
 };
 
@@ -50,25 +49,28 @@ struct Msg {
 }
 
 #[derive(Deserialize, Serialize, Debug)]
-enum Role {
-    System,
-    User,
+struct OllamaReqBody {
+    model: String,
+    messages: Vec<Msg>,
 }
 
-impl Default for Role {
+impl Default for OllamaReqBody {
     fn default() -> Self {
-        Self::System
+        Self {
+            model: String::from("deepseek-r1:8b"),
+            messages: Vec::new(),
+        }
     }
 }
 
 pub const MARGIN: i32 = 1;
 
 impl<'a> Chat<'a> {
-    pub fn new(input: Vec<String>) -> Self {
+    pub fn new(input: Vec<(String, Role)>) -> Self {
         let mut messages: Vec<Message> = input
             .into_iter()
             .enumerate()
-            .map(|(i, item)| Message::new(i, item, false))
+            .map(|(i, item)| Message::new(i, item.0, false, item.1))
             .collect();
 
         if messages.len() > 0 {
@@ -131,19 +133,11 @@ impl<'a> Chat<'a> {
         self.scroll_area = scroll_area;
     }
 
-    pub fn push_msg(&mut self, value: String) -> usize {
+    pub fn push_user_message(&mut self, value: String) -> usize {
         let idx = self.messages.len();
-        let msg = Message::new(idx, value, false);
+        let msg = Message::new(idx, value, false, Role::User);
         self.messages.push(msg);
         idx
-    }
-
-    pub fn alter_msg(&mut self, idx: usize, value: String) -> Result<(), &str> {
-        if self.messages.len() <= idx {
-            return Err("Failed to alter message");
-        }
-        self.messages[idx] = Message::new(idx, value, false);
-        Ok(())
     }
 
     pub fn render_vertical_scrollbar(
@@ -166,6 +160,20 @@ impl<'a> Chat<'a> {
         StatefulWidget::render(scrollbar, area, buf, &mut scrollbar_state);
     }
 
+    fn generate_req_body(&self) -> OllamaReqBody {
+        let mut response = OllamaReqBody::default();
+
+        self.messages.iter().for_each(|item| {
+            let msg = Msg {
+                role: item.role.to_lower_string(),
+                content: item.text.clone(),
+            };
+            response.messages.push(msg);
+        });
+
+        response
+    }
+
     /// This method is going to spawn an async thread and it will update the response String
     /// with the latest response, once it is done, it calls a method that will lock the response
     /// of the LLM
@@ -179,13 +187,15 @@ impl<'a> Chat<'a> {
         *generating_response.lock().unwrap() = true;
 
         let response = self.response.clone();
+        let body = self.generate_req_body();
 
         task::spawn(async move {
-            info!("task started");
+            let json = serde_json::to_string(&body).unwrap();
+
             let client = Client::new();
             let bytes = client
                 .post("http://localhost:11434/api/chat")
-                .body(r#"{ "model": "deepseek-r1:8b", "messages": [{ "role": "system", "content": "You are a helpful assistant." }, { "role": "user", "content": "Tell me a joke about penguins." }] }"#)
+                .body(json)
                 .header("Content-Type", "application/json")
                 .send()
                 .await
@@ -212,34 +222,21 @@ impl<'a> Widget for &mut Chat<'a> {
         // we are still generating the answer
         // from the LLM
         if *self.generating_response.lock().unwrap() {
-            info!("if");
             let idx = self.messages.len() - 1;
             let msg = &self.messages[idx];
-            info!("msg {:?}", msg);
             let resp = (*self.response.lock().unwrap()).clone();
-            info!("resp {}", resp);
             if msg.generating {
                 // this means that we already added the message to the array
-                let msg = Message::new(idx, resp, true);
+                let msg = Message::new(idx, resp, true, Role::System);
                 self.messages[idx] = msg;
             } else {
                 // and this means we didn't
-                let msg = Message::new(idx + 1, resp, true);
+                let msg = Message::new(idx + 1, resp, true, Role::System);
                 self.messages.push(msg);
             }
+        } else {
+            *self.response.lock().unwrap() = String::from("");
         }
-        // } else {
-        //     info!("else");
-        //     let idx = self.messages.len() - 1;
-        //     let msg = &self.messages[idx];
-        //     let resp = (*self.response.lock().unwrap()).clone();
-        //     if msg.generating {
-        //         // this means that we already added the message to the array
-        //         let msg = Message::new(idx, resp, false);
-        //         self.messages[idx] = msg;
-        //     }
-        //     *self.response.lock().unwrap() = String::from("");
-        // }
 
         let layout = Layout::horizontal([
             Constraint::Percentage(5),

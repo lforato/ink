@@ -13,9 +13,32 @@ use crate::utils::{get_height, get_longest_string};
 pub const OFFSET: usize = 2;
 
 #[derive(Debug)]
+pub enum Role {
+    User,
+    System,
+}
+
+impl Role {
+    pub fn to_lower_string(&self) -> String {
+        match self {
+            Role::User => String::from("user"),
+            Role::System => String::from("system"),
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        match self {
+            Role::User => String::from("User"),
+            Role::System => String::from("System"),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Message {
     pub id: usize,
     pub is_selected: bool,
+    pub role: Role,
     pub text: String,
     pub height: u16,
     /// horizontal scroll position
@@ -23,11 +46,11 @@ pub struct Message {
     /// horizontal scroll area
     pub scroll_area: usize,
     pub skip_lines: u16,
-    pub generating: bool
+    pub generating: bool,
 }
 
 impl Message {
-    pub fn new(id: usize, text: String, generating: bool) -> Self {
+    pub fn new(id: usize, text: String, generating: bool, role: Role) -> Self {
         let height = get_height(&text) as usize;
         Message {
             id,
@@ -36,6 +59,7 @@ impl Message {
             height: height as u16,
             scroll_state: 0,
             scroll_area: 0,
+            role,
             skip_lines: 0,
             generating: generating,
         }
