@@ -14,7 +14,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::{
     io::Result,
-    sync::{Arc, Mutex, mpsc},
+    sync::{mpsc},
     time::Duration,
 };
 use tokio::task;
@@ -32,8 +32,8 @@ pub struct Chat<'a> {
     /// used to render the scrollbar, it represents
     /// how much space the scrollbar will have for scrolling
     pub scroll_area: usize,
-    pub rx: mpsc::Receiver<Chunk>,
-    pub tx: mpsc::Sender<Chunk>,
+    rx: mpsc::Receiver<Chunk>,
+    tx: mpsc::Sender<Chunk>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Default)]
