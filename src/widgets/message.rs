@@ -69,8 +69,10 @@ impl Message {
         let width = get_longest_string(&self.text);
         let viewport_width = area.width as usize;
         let scroll_area = width.saturating_sub(viewport_width);
+        let height = get_height(&self.text) as usize;
 
         self.scroll_area = scroll_area;
+        self.height = height as u16;
     }
 
     pub fn set_skip_lines(&mut self, skip_lines: u16) {

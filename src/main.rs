@@ -3,7 +3,7 @@ use crossterm::{
     execute,
 };
 use flexi_logger::{FileSpec, Logger, detailed_format};
-use ink::widgets::chat::Chat;
+use ink::widgets::{chat::Chat, message::{Message, Role}};
 use log::info;
 use ratatui::{
     DefaultTerminal, Frame,
@@ -63,7 +63,6 @@ struct Msg {
 impl<'a> App<'a> {
     fn new() -> Self {
         let chat = Chat::new(Vec::new());
-
         Self { chat, exit: false }
     }
 

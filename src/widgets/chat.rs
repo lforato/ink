@@ -248,7 +248,7 @@ impl<'a> Widget for &mut Chat<'a> {
         if let Ok(chan_msg) = self.rx.try_recv() {
             if let Some(last_msg) = self.messages.last_mut() {
                 last_msg.text.push_str(chan_msg.message.content.as_ref());
-                info!("{:?}", last_msg);
+                info!("{:?}", last_msg.text);
             }
         }
 
