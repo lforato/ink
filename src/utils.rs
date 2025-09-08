@@ -2,7 +2,7 @@ use crate::widgets::message::OFFSET;
 
 pub fn get_height(text: &String) -> u16 {
     let count = text.split('\n').count();
-    (count + OFFSET).max(4) as u16
+    (count + OFFSET).max(3) as u16
 }
 
 pub fn get_longest_string(text: &String) -> usize {

@@ -3,8 +3,7 @@ use crate::widgets::{
     textarea::TextArea,
 };
 use futures_util::stream::StreamExt;
-use log::info;
-use ratatui::crossterm::event::{self, Event, KeyCode};
+use ratatui::crossterm::event::{Event, KeyCode, KeyModifiers};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -12,11 +11,7 @@ use ratatui::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::{
-    io::Result,
-    sync::{mpsc},
-    time::Duration,
-};
+use std::{io::Result, sync::mpsc};
 use tokio::task;
 
 #[derive(Debug)]
@@ -94,27 +89,21 @@ impl<'a> Chat<'a> {
         }
     }
 
-    fn handle_events(&mut self) -> Result<()> {
-        if let Ok(has_event) = event::poll(Duration::from_millis(100)) {
-            if !has_event {
+    pub fn handle_events(&mut self, event: Event) -> Result<()> {
+        if let Event::Key(key) = event {
+            if key.code == KeyCode::Char('n') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                self.textarea.area.insert_newline();
                 return Ok(());
             }
-        }
 
-        if self.textarea.is_selected {
-            if let Event::Key(key) = event::read()? {
-                if key.code == KeyCode::Esc {
-                    self.textarea.is_selected = false
-                }
-                if key.code == KeyCode::Enter {
-                    self.textarea.area.select_all();
-                    self.textarea.area.cut();
-                    self.push_user_message(self.textarea.area.yank_text());
-                    self.textarea.area.set_yank_text("");
-                    self.start_generating();
-                }
-                self.textarea.area.input(key);
+            if key.code == KeyCode::Enter {
+                let txt = self.textarea.clear();
+                self.push_user_message(txt);
+                self.start_generating();
+                return Ok(());
             }
+
+            self.textarea.area.input(key);
         }
 
         Ok(())
@@ -248,11 +237,8 @@ impl<'a> Widget for &mut Chat<'a> {
         if let Ok(chan_msg) = self.rx.try_recv() {
             if let Some(last_msg) = self.messages.last_mut() {
                 last_msg.text.push_str(chan_msg.message.content.as_ref());
-                info!("{:?}", last_msg.text);
             }
         }
-
-        self.handle_events().unwrap();
 
         let layout = Layout::horizontal([
             Constraint::Percentage(5),
@@ -271,7 +257,7 @@ impl<'a> Widget for &mut Chat<'a> {
         let chat_inner = chat_inner_layout[0];
         let chat_textarea = chat_inner_layout[1];
 
-        let total_height: u16 = self.messages.iter().map(|m| m.height).sum();
+        let total_height: u16 = self.messages.iter().map(|m| m.text_height).sum();
         self.height = total_height as usize + OFFSET;
 
         let scroll_top = self.scroll_state as i32;
@@ -284,7 +270,7 @@ impl<'a> Widget for &mut Chat<'a> {
         self.textarea.render(chat_textarea, buf);
 
         for item in self.messages.iter_mut() {
-            let h = item.height as i32;
+            let h = item.text_height as i32;
 
             let msg_top = y - chat_inner.y as i32;
             let msg_bottom = msg_top + h;
@@ -321,14 +307,14 @@ impl<'a> Widget for &mut Chat<'a> {
             }
 
             let msg_top_hit_bottom = msg_top + MARGIN == visible_bottom;
-            if msg_top_hit_bottom && item.is_selected && item.id > 0 {
+            if msg_top_hit_bottom && item.is_selected && item.index > 0 {
                 new_id -= 1;
                 item.is_selected = false;
             }
 
             let msg_bottom_hit_top = msg_bottom == visible_top + MARGIN;
             if msg_bottom_hit_top && item.is_selected {
-                if item.id + 1 < len {
+                if item.index + 1 < len {
                     new_id += 1;
                     item.is_selected = false;
                 }

@@ -1,3 +1,5 @@
+use log::info;
+use ratatui::crossterm::event::{Event, KeyCode};
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Layout, Rect},
@@ -7,6 +9,8 @@ use ratatui::{
         Widget,
     },
 };
+use std::io::Result;
+use uuid::Uuid;
 
 use crate::utils::{get_height, get_longest_string};
 
@@ -36,32 +40,42 @@ impl Role {
 
 #[derive(Debug)]
 pub struct Message {
-    pub id: usize,
+    pub id: Uuid,
+    pub index: usize,
     pub is_selected: bool,
     pub role: Role,
     pub text: String,
-    pub height: u16,
+    pub text_height: u16,
     /// horizontal scroll position
     pub scroll_state: usize,
     /// horizontal scroll area
     pub scroll_area: usize,
     pub skip_lines: u16,
     pub generating: bool,
+    pub x: u16,
+    pub y: u16,
+    pub width: u16,
+    pub height: u16,
 }
 
 impl Message {
     pub fn new(id: usize, text: String, generating: bool, role: Role) -> Self {
         let height = get_height(&text) as usize;
         Message {
-            id,
+            id: Uuid::new_v4(),
+            index: id,
             is_selected: false,
             text,
-            height: height as u16,
+            text_height: height as u16,
             scroll_state: 0,
             scroll_area: 0,
             role,
             skip_lines: 0,
             generating: generating,
+            x: 0,
+            y: 0,
+            height: 0,
+            width: 0,
         }
     }
 
@@ -72,7 +86,34 @@ impl Message {
         let height = get_height(&self.text) as usize;
 
         self.scroll_area = scroll_area;
-        self.height = height as u16;
+        self.text_height = height as u16;
+        self.x = area.x;
+        self.y = area.y;
+        self.width = area.width;
+        self.height = area.height;
+    }
+
+    pub fn handle_events(&mut self, event: Event) -> Result<()> {
+        if let Event::Key(key) = event {
+            if key.code == KeyCode::Char('l') {
+                info!("pressed L");
+                self.scroll_right();
+                return Ok(());
+            }
+            if key.code == KeyCode::Char('h') {
+                info!("pressed H");
+                self.scroll_left();
+                return Ok(());
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn is_within(&self, x: u16, y: u16) -> bool {
+        let within_x = x >= self.x && x < self.x + self.width;
+        let within_y = y >= self.y && y < self.y + self.text_height;
+        within_x && within_y
     }
 
     pub fn set_skip_lines(&mut self, skip_lines: u16) {
@@ -115,7 +156,7 @@ impl Widget for &mut Message {
 
         let layout = Layout::vertical([
             Constraint::Length(scroll_or_zero),
-            Constraint::Length(self.height - self.skip_lines),
+            Constraint::Length(self.text_height - self.skip_lines),
         ])
         .split(area);
 
