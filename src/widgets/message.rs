@@ -119,8 +119,6 @@ impl Message {
     }
 
     pub fn scroll_right(&mut self) -> () {
-        info!("scroll_area {}", self.scroll_area);
-        info!("scroll state {}", self.scroll_state);
         if self.scroll_state > self.scroll_area {
             return;
         }
@@ -128,8 +126,6 @@ impl Message {
     }
 
     pub fn scroll_left(&mut self) {
-        info!("scroll_area {}", self.scroll_area);
-        info!("scroll state {}", self.scroll_state);
         if self.scroll_state == 0 {
             return;
         }
