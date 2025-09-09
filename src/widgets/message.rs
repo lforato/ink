@@ -96,12 +96,10 @@ impl Message {
     pub fn handle_events(&mut self, event: Event) -> Result<()> {
         if let Event::Key(key) = event {
             if key.code == KeyCode::Char('l') {
-                info!("pressed L");
                 self.scroll_right();
                 return Ok(());
             }
             if key.code == KeyCode::Char('h') {
-                info!("pressed H");
                 self.scroll_left();
                 return Ok(());
             }
@@ -121,13 +119,17 @@ impl Message {
     }
 
     pub fn scroll_right(&mut self) -> () {
-        if self.scroll_area > self.scroll_state {
+        info!("scroll_area {}", self.scroll_area);
+        info!("scroll state {}", self.scroll_state);
+        if self.scroll_state > self.scroll_area {
             return;
         }
         self.scroll_state += 1;
     }
 
     pub fn scroll_left(&mut self) {
+        info!("scroll_area {}", self.scroll_area);
+        info!("scroll state {}", self.scroll_state);
         if self.scroll_state == 0 {
             return;
         }
