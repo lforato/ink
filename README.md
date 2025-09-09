@@ -1,22 +1,7 @@
-Simple ideas and todos for this project
+<img width="1640" height="1025" alt="image" src="https://github.com/user-attachments/assets/176f462c-166b-4357-a1fa-eb600789f3d6" />
 
-- [ ] create a textbox where the user can type
+### About it
 
-- [x] create the modes initializer
+Ink is an extremely simple CLI for interacting with LLMs through ollama. I covers only the most basic features, which are asking questions and receiving the answers.
 
----
-
-- [ ] Ask a question and get a response from ollama through Ink
-
-- [ ] Add context files to the question
-
-- [ ] Include some modes, like:
-    - [ ] Debug mode - mode where we can provide errors and the LLM will help solve them.
-    - [ ] Exploration mode - mode to help understand the code.
-    - [ ] Default - nothing included, just the default.
-
-
----
-Maybe
-
-- [ ] Start an ollama session on a specific file 
+Ink was a project that I developed to learn Rust, so it is quite simple, but I enjoyed doing it very much :)
